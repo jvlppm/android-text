@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TextSample</string>
+    <string name="sample_resource_text">Sample text from resource</string>
+    <string name="sample_format_text">Text with %s replacement %s</string>
+</resources>
