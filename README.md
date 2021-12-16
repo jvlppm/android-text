@@ -6,14 +6,37 @@ Create and format text from android ViewModel.
 
 *Step 1.* Add the JitPack repository to your build file
 
-Add it in your root build.gradle at the end of repositories:
-
+Add jitpack.io as a repository on your settings.gradle
 
 ```
-	repositories {
-		...
-		maven { url 'https://jitpack.io' }
-	}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        ...
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+Older projects had the repositories defined inside build.gradle instead
+
+```
+buildscript {
+    repositories {
+        jcenter()
+        // DO NOT ADD IT HERE!!!
+    }
+    ...
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        jcenter()
+        // ADD IT HERE
+        maven { url "https://jitpack.io" }
+    }
+}
 ```
 
 *Step 2.* Add the dependency to your app's build.gradle
