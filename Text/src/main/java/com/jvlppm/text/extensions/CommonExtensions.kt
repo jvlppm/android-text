@@ -1,7 +1,6 @@
 package com.jvlppm.text.extensions
 
 import android.content.Context
-import android.content.res.Resources
 import android.text.Spannable
 import android.text.SpannableString
 import com.jvlppm.text.Text
@@ -25,48 +24,61 @@ fun Text.asSpannable(context: Context, styleMarkupResolver: StyleMarkupResolver?
     return spannableString
 }
 
-private val styleAttributeRx = Pattern.compile(".* style=[\"']([^\"']+?)[\"']").toRegex()
+private val propertiesAttributeRx = Pattern.compile("\\b(\\w+)=(((?!['\"])[^ ]+)|(?<quote>[\"\'])(((?!\\k<quote>).)*)\\k<quote>)").toRegex()
 
-private fun decodeTag(name: String, style: (Text)->Text): Pair<Pattern, (MatchResult, Int)->Text> {
-    val openRx = "<$name[\\s>]"
-    val closeRx = "<\\/$name>"
+private fun getFindTagPattern(): String {
+    val capturingOpenRx = "<(\\w+)( [^>]*)?>"
+    val increaseLevel = "<\\1[\\s>]"
+    val decreaseLevel = "<\\/\\1>"
+    val closeAnyRx = "<\\/\\w+>"
+    return "(?=$capturingOpenRx)(?:(?=.*?$increaseLevel(?!.*?\\3)(.*$closeAnyRx(?!.*\\4).*))(?=.*?$decreaseLevel(?!.*?\\4)(?<second>.*)).)+?.*?(?=\\3)((?!$increaseLevel).)*(?=\\4\$)"
+}
 
-    val openClosePattern = Pattern.compile("(?=$openRx)(?:(?=.*?$openRx(?!.*?\\1)(.*$closeRx(?!.*\\2).*))(?=.*?$closeRx(?!.*?\\2)(?<second>.*)).)+?.*?(?=\\1)((?!$openRx).)*(?=\\2\$)")
+private fun decodeTag(style: (String)->Any?): Pair<Pattern, (MatchResult, Int)->Text> {
+    val openClosePattern = Pattern.compile(getFindTagPattern(), Pattern.DOTALL)
+    val outerTagRx = Pattern.compile("<(\\w+)( [^>]*)?>(?<content>.*)<\\/\\1>").toRegex()
 
-    val outerTagRx = Pattern.compile("<$name( style=(?<quote>['\"])(((?!\\k<quote>).)*)\\k<quote>)?\\s*>(?<content>.*)<\\/$name>").toRegex()
+    fun getStyle(tag: String, tagStyle: Sequence<Pair<String,String>>) = listOfNotNull(
+        style(tag),
+    ) + tagStyle.map { if (it.first == "style") it.second else "${it.first}:${it.second}" }
 
     return openClosePattern to { match, _ ->
-        outerTagRx.matchEntire(match.groupValues[0])?.let {
-            style(Text(it.groupValues[5].trim(), style = it.groupValues[3]).decodeStyleTagsInternal())
+        val tagName = match.groupValues[1]
+        val tagProperties = match.groupValues[2]
+        val properties = propertiesAttributeRx.findAll(tagProperties).map { m -> m.groupValues[1] to (m.groupValues[3].valueOrNull() ?: m.groupValues[5]) }
+
+        val content = outerTagRx.matchEntire(match.groupValues[0])?.let { outerMatch ->
+            outerMatch.groupValues[3].trim()
         } ?: run {
-            // Fallback
-            val openTagContent = match.groupValues[0].takeWhile { it != '>' }
-            val content = match.groupValues[0].dropWhile { it != '>' }.drop(1).dropLastWhile { it != '<' }.dropLast(1).trim()
-            val styleContent = styleAttributeRx.matchEntire(openTagContent)?.let {
-                it.groupValues[1]
-            }
-            style(Text(content, style = styleContent).decodeStyleTagsInternal())
+            match.groupValues[0].dropWhile { it != '>' }.drop(1).dropLastWhile { it != '<' }.dropLast(1).trim()
         }
+        Text(content, style = getStyle(tag = tagName, tagStyle = properties)).decodeStyleTagsInternal()
     }
 }
 
 private fun Text.decodeStyleTagsInternal(): Text {
+    return this.replaceAll(
+        decodeTag { tagName ->
+           when (tagName) {
+                "u" -> "underline"
+                "s" -> "strike"
+                "i" -> "italic"
+                "b" -> "bold"
+                "small" -> "scale:0.66"
+                "big" -> "scale:1.33"
+                else -> tagName
+           }
+        },
+    )
+}
+
+private fun Text.decodeLineBreakTags(): Text {
     val breakLineBetweenTags = listOf("p", "div")
     val breakTagsRx = breakLineBetweenTags.joinToString("|") { "\\b$it\\b" }
     return this.replaceAll(
+        Pattern.compile("[\\s]+") to { _, _ -> Text.space },
+    ).replaceAll(
         Pattern.compile("<br/?>") to { _, _ -> Text.lineBreak },
-        decodeTag("u") { it.withStyle("underline") },
-        decodeTag("s") { it.withStyle("strike") },
-        decodeTag("strike") { it.withStyle("strike") },
-        decodeTag("i") { it.withStyle("italic") },
-        decodeTag("b") { it.withStyle("bold") },
-        decodeTag("strong") { it.withStyle("strong") },
-        decodeTag("small") { it.withStyle("scale:0.66") },
-        decodeTag("big") { it.withStyle("scale:1.33") },
-
-        decodeTag("p") { it },
-        decodeTag("div") { it },
-
         // Line break before first block tag
         Pattern.compile("(?<!<\\/($breakTagsRx)>)(?<=[a-z-9<>])\\s*(?=<($breakTagsRx))") to { match, _ ->
             Text.concatenate(
@@ -81,14 +93,18 @@ private fun Text.decodeStyleTagsInternal(): Text {
                 Text("\n", style = "scale:0.5").takeIf { match.groupValues[1] == "p" }
             )
         },
-    ).trim()
+    )
 }
 
-fun Text.decodeStyleTags() = this.replaceAll(
-    Pattern.compile("[\\s]+") to { _, _ -> Text.space },
-).decodeStyleTagsInternal()
+fun Text.decodeStyleTags(decodeLineBreaks: Boolean = false) = this.let {
+    if (decodeLineBreaks) {
+        it.decodeLineBreakTags()
+    }
+    else it
+}.decodeStyleTagsInternal()
 
 fun Text.trim() = this.replaceAll(
     Pattern.compile("^[\\s]+") to { _, _ -> Text.empty },
     Pattern.compile("[\\s]+$") to { _, _ -> Text.empty },
 )
+
