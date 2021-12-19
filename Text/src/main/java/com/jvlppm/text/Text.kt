@@ -356,8 +356,11 @@ abstract class Text {
                     val replacements = findReplacements(baseString, context).toList()
 
                     baseSpans.forEach { baseSpan ->
+
+
                         val outside = replacements.filter { it.originalRange.first < baseSpan.range.first && it.originalRange.last > baseSpan.range.last }
                         val startedBeforeAndFinishInside = replacements.filter { it.originalRange.first < baseSpan.range.first && it.originalRange.last >= baseSpan.range.first && it.originalRange.last <= baseSpan.range.last }
+
                         val trimStart = startedBeforeAndFinishInside.maxByOrNull { it.originalRange.first }?.let {
                             baseSpan.range.last - it.rangeAfterReplace.first
                         } ?: 0
@@ -368,12 +371,15 @@ abstract class Text {
                             val during = replacements.filter { it.originalRange.first >= baseSpan.range.first && it.originalRange.last <= baseSpan.range.last }
                             val offsetSizeChange = during.sumOf { it.sizeChange }
 
-                            val startInsideAndFinishAfter = replacements.filter { it.originalRange.first >= baseSpan.range.first && it.originalRange.last > baseSpan.range.last }
+                            val startInsideAndFinishAfter = replacements.filter { it.originalRange.first > baseSpan.range.first && it.originalRange.first < baseSpan.range.last && it.originalRange.last > baseSpan.range.last }
                             val trimEnd = startInsideAndFinishAfter.minByOrNull { it.originalRange.first }?.let {
                                 baseSpan.range.last - it.rangeAfterReplace.first + 1
                             }?.coerceAtLeast(0) ?: 0
 
-                            yield(baseSpan.offset(offsetStartChange + trimStart, offsetSizeChange - trimStart - trimEnd))
+                            val relocated = baseSpan.offset(offsetStartChange + trimStart, offsetSizeChange - trimStart - trimEnd)
+                            if (relocated.range.last + 1 >= relocated.range.first) {
+                                yield(relocated)
+                            }
                         }
                     }
 
