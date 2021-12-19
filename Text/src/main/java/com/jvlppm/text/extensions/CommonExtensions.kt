@@ -108,3 +108,37 @@ fun Text.trim() = this.replaceAll(
     Pattern.compile("[\\s]+$") to { _, _ -> Text.empty },
 )
 
+private fun Text.decodeMarkdownStyle(): Text = this.replaceAll(
+    Pattern.compile("_([^_]*?)_") to { match, index -> Text(match.groupValues[1], "italic").decodeMarkdownStyle() },
+    Pattern.compile("\\*\\*([^*]*?)\\*\\*") to { match, index -> Text(match.groupValues[1], "bold").decodeMarkdownStyle() },
+)
+
+private fun Text.joinMarkdownLines() = this.replaceAll(
+    // Find last-lines in section
+    Pattern.compile("(^|(?<=\\n)[ ]*)(?=\\w)([^#\\r\\n]+?)((\\r?\\n[ ]*){2,}|(\\r?\\n[ ]*(?=#)))") to { match, index -> Text(match.groupValues[2].trim() + "\n") },
+    // Join single line-breaks
+    Pattern.compile("(^|(?<=\\n)[ ]*)(?=\\w)([^#\\r\\n]+?)(\\r?\\n[ ]*)+(?=[^\\r\\n#])") to { match, index -> Text("${match.groupValues[2].trim()} ") },
+)
+
+private fun decodeMarkdownHeaderReplacement(size: Int, style: Any): Pair<Pattern, (MatchResult, Int)->Text> =
+    Pattern.compile("(^|(?<=\\n)[ ]*)[ ]*#{$size}[ ]*([^#\\r\\n]+?($|\\r?\\n))($|[\\r\\n ]*)") to { match, index ->
+        Text.concatenate(
+            Text(match.groupValues[2].trim(), style),
+            Text("\n")
+        )
+    }
+
+private fun Text.decodeMarkdownHeaders() = this.replaceAll(
+    decodeMarkdownHeaderReplacement(1, "scale:2"),
+    decodeMarkdownHeaderReplacement(2, "scale:1.75"),
+    decodeMarkdownHeaderReplacement(3, "scale:1.5"),
+    decodeMarkdownHeaderReplacement(4, "scale:1.25"),
+    decodeMarkdownHeaderReplacement(5, "scale:1.1"),
+    decodeMarkdownHeaderReplacement(6, "scale:0.9"),
+)
+
+fun Text.decodeSimpleMarkdown(): Text = this
+    .joinMarkdownLines()
+    .decodeMarkdownHeaders()
+    .decodeMarkdownStyle()
+    .trim()
