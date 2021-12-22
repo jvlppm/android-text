@@ -1,6 +1,8 @@
 # android-text
 
-Create and format text from android ViewModel.
+Create and style a text from android ViewModel, without depending on a context.
+
+It can be easily converted to a SpannableString, providing a context, without worrying about ranges.
 
 ## Setup
 
@@ -57,6 +59,11 @@ dependencies {
 Your viewModel can create a Text using either a `String` or a `@StringRes Int`,
 without a reference to context.
 
+```kotlin
+val staticText = Text("Simple Text")
+val resourceText = Text(R.string.my_resource_text, style = "bold")
+```
+
 This `Text` can be manipulated / formatted by your view model,
 with text replacement methods and other facilities.
 
@@ -75,12 +82,22 @@ fun TextView.setText(text: Text?)
 
 And since this method is declared as a `BindingAdapter`, you can also use `android:text` on your xml
 
-
 ```xml
 <TextView
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:text="@{viewModel.myTextVariable}" />
+```
+
+You can also create the SpannableString and apply it manually.
+
+```kotlin
+import com.jvlppm.text.extensions
+
+/**
+ * This method creates a SpannableString with the corresponding text and styles applied.
+ */
+fun Text.asSpannable(context: Context): SpannableString
 ```
 
 ---
@@ -90,21 +107,21 @@ And since this method is declared as a `BindingAdapter`, you can also use `andro
 A text can be created in a few ways
 
 ```kotlin
-val direct = Text("Sample")
+val staticText = Text("Sample")
 val resourceText = Text(R.string.my_resource_text)
 
-val addingText = direct + Text.space + resourceText
+val addingText = staticText + Text.space + resourceText
 
 // Note that the final string will only be resolved later when the UI invoke toString(context)
 
 val concatenated = Text.concatenated(
-    direct,
+    staticText,
     Text.space,
     resourceText
 )
 
 val spaced = Text.spaced(
-    direct,
+    staticText,
     resourceText
 )
 
