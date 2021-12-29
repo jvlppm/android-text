@@ -71,7 +71,7 @@ class MainViewModel : ViewModel() {
         )
 
     val replaceByPattern get() = Text("Simple text with pattern replacement")
-        .replaceAll(Pattern.compile("\\b[\\w]{4}\\b") to { match, index -> Text(match.value.uppercase(), style = "color:red") })
+        .replaceAll(Pattern.compile("\\b[\\w]{4}\\b") to { match -> Text(match.value.uppercase(), style = "color:red") })
 
     private val _clickCount = MutableLiveData(0)
 

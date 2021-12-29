@@ -3,6 +3,7 @@ package com.jvlppm.text
 import android.content.Context
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
+import java.util.*
 import java.util.regex.Pattern
 
 
@@ -18,7 +19,7 @@ abstract class Text {
         fun concatenate(vararg parts: Text?): Text = Separated(null, null, *parts)
         fun joining(separator: Text?, vararg parts: Text?): Text = Separated(separator, null, *parts)
         fun lines(vararg parts: Text?): Text = Separated(null, style = null, *parts.take(parts.size - 1).map {
-            it?.replaceAll(Pattern.compile("$") to { _, _ -> lineBreak })
+            it?.replaceAll(Pattern.compile("$") to { lineBreak })
         }.toTypedArray(), parts.lastOrNull())
 
         val empty = Text("")
@@ -31,11 +32,11 @@ abstract class Text {
     }
 
     fun quoted(): Text {
-        return this.replaceAll(Pattern.compile(".+") to { match, _ -> Text("\"${match.value}\"") })
+        return this.replaceAll(Pattern.compile(".+") to { match -> Text("\"${match.value}\"") })
     }
 
     fun terminated(): Text {
-        return this.replaceAll(Pattern.compile("(?<=\\w)(?<=[^\\.,!\\?])\\s*\$", Pattern.MULTILINE) to { _, _ -> Text(".") })
+        return this.replaceAll(Pattern.compile("(?<=\\w)(?<=[^\\.,!\\?])\\s*\$", Pattern.MULTILINE) to { Text(".") })
     }
 
     fun withStyle(style: Any?): Text {
@@ -77,22 +78,49 @@ abstract class Text {
         }
     }
 
+    private class StringFormatReplaceState {
+        var lastUsedIndex: Int? = null
+        private var nextIndex = 0
+
+        fun getNextIndex(): Int {
+            return nextIndex.also {
+                nextIndex += 1
+            }
+        }
+    }
+
     fun formatString(vararg args: Any): Text {
         return replaceAll(
-            Pattern.compile("%[^a-z]*[0-9a-z]+") to { match, index ->
-                args.getOrNull(index)?.let { argument ->
-                    if (argument is Pair<*,*>)
-                        Text(String.format(match.value, argument.first), style = argument.second)
-                    else
-                        Text(String.format(match.value, argument))
-                } ?: Text(match.value)
+            createState = { StringFormatReplaceState() },
+            Pattern.compile("%(((\\d+)\\$)|<)?([^a-z]*[0-9a-z]+)", Pattern.CASE_INSENSITIVE) to { match, state ->
+                val customIndex = match.groupValues[3]
+                val formatExpression = "%${match.groupValues[4]}"
+                val argumentIndex = when {
+                    match.groupValues[1] == "<" -> state.lastUsedIndex ?: throw MissingFormatArgumentException(match.value)
+                    else -> customIndex.toIntOrNull()?.let { it - 1 } ?: state.getNextIndex()
+                }
+                state.lastUsedIndex = argumentIndex
+                val argument = args.getOrNull(argumentIndex) ?: throw MissingFormatArgumentException(match.value)
+
+                if (argument is Pair<*,*>)
+                    Text(String.format(formatExpression, argument.first), style = argument.second)
+                else
+                    Text(String.format(formatExpression, argument))
             }
         )
     }
 
     @JvmName("replaceAllByPattern")
-    fun replaceAll(vararg slots: Pair<Pattern, (MatchResult, Int)->Text>): Text =
-        TextWrapper.ReplaceSlots(this, *slots.map { ReplacementSlot(
+    fun replaceAll(vararg slots: Pair<Pattern, (MatchResult)->Text>): Text =
+        TextWrapper.ReplaceSlots(this, { null }, *slots.map { ReplacementSlot<Any?>(
+            regex = { _ -> it.first.toRegex() },
+            replacement = { m, _ -> it.second(m) },
+            replaceAll = true,
+        ) }.toTypedArray())
+
+    @JvmName("replaceAllByPatternWithState")
+    fun <TState> replaceAll(createState: ()->TState, vararg slots: Pair<Pattern, (MatchResult, TState)->Text>): Text =
+        TextWrapper.ReplaceSlots(this, createState, *slots.map { ReplacementSlot(
             regex = { _ -> it.first.toRegex() },
             replacement = it.second,
             replaceAll = true,
@@ -100,31 +128,39 @@ abstract class Text {
 
     @JvmName("replaceAllByString")
     fun replaceAll(vararg slots: Pair<String, Text>): Text =
-        TextWrapper.ReplaceSlots(this, *slots.map { ReplacementSlot(
+        TextWrapper.ReplaceSlots(this, { null }, *slots.map { ReplacementSlot<Any?>(
             regex = { _ -> Pattern.compile(Regex.escape(it.first)).toRegex() },
             replacement = { _, _ -> it.second },
             replaceAll = true,
         ) }.toTypedArray())
 
-    @JvmName("replaceByPattern")
+    @JvmName("replaceOnceByPattern")
     fun replaceOnce(vararg slots: Pair<Pattern, (MatchResult)->Text>): Text =
-        TextWrapper.ReplaceSlots(this, *slots.map { ReplacementSlot(
+        TextWrapper.ReplaceSlots(this, { null }, *slots.map { ReplacementSlot<Any?>(
             regex = { _ -> it.first.toRegex() },
             replacement = { match, _ -> it.second(match) },
             replaceAll = false,
         ) }.toTypedArray())
 
-    @JvmName("replaceByString")
+    @JvmName("replaceOnceByPatternWithState")
+    fun <TState> replaceOnce(createState: ()->TState, vararg slots: Pair<Pattern, (MatchResult, TState)->Text>): Text =
+        TextWrapper.ReplaceSlots(this, createState, *slots.map { ReplacementSlot(
+            regex = { _ -> it.first.toRegex() },
+            replacement = it.second,
+            replaceAll = false,
+        ) }.toTypedArray())
+
+    @JvmName("replaceOnceByString")
     fun replaceOnce(vararg slots: Pair<String, Text>): Text =
-        TextWrapper.ReplaceSlots(this, *slots.map { ReplacementSlot(
+        TextWrapper.ReplaceSlots(this, { null }, *slots.map { ReplacementSlot<Any?>(
             regex = { _ -> Pattern.compile(Regex.escape(it.first)).toRegex() },
             replacement = { _, _ -> it.second },
             replaceAll = false,
         ) }.toTypedArray())
 
-    private data class ReplacementSlot(
+    private data class ReplacementSlot<TState>(
         val regex: (context: Context) -> Regex?,
-        val replacement: (MatchResult, Int)->Text,
+        val replacement: (MatchResult, TState)->Text,
         val replaceAll: Boolean,
     )
 
@@ -315,14 +351,14 @@ abstract class Text {
             }
         }
 
-        class ReplaceSlots(text: Text, vararg val args: ReplacementSlot): TextWrapper(text) {
+        class ReplaceSlots<TState>(text: Text, val createState: ()->TState, vararg val args: ReplacementSlot<TState>): TextWrapper(text) {
             override val style: Any? = null
 
             override fun equals(other: Any?): Boolean {
                 if (this === other) return true
                 if (javaClass != other?.javaClass) return false
 
-                other as ReplaceSlots
+                other as ReplaceSlots<TState>
 
                 if (text != other.text) return false
                 if (!args.contentEquals(other.args)) return false
@@ -402,7 +438,7 @@ abstract class Text {
             private fun findReplacements(baseString: String, context: Context) = sequence {
 
                 val usedReplacements = mutableListOf<IntRange>()
-                val usedSlots = mutableSetOf<ReplacementSlot>()
+                val usedSlots = mutableSetOf<ReplacementSlot<TState>>()
 
                 var matchOffset = 0
                 val matches = findOrderedMatches(context, baseString)
@@ -437,18 +473,17 @@ abstract class Text {
             private fun findOrderedMatches(
                 context: Context,
                 baseString: String
-            ): List<Triple<IntRange, Text, ReplacementSlot>> {
-                val replacements = mutableListOf<Triple<IntRange, Text, ReplacementSlot>>()
+            ): List<Triple<IntRange, Text, ReplacementSlot<TState>>> {
+                val replacements = mutableListOf<Triple<IntRange, Text, ReplacementSlot<TState>>>()
 
                 args.forEach { slot ->
                     val validMatches =
                         slot.regex(context)?.findAll(baseString, 0)
-                    var index = 0
+                    val state = createState()
                     validMatches?.forEach {
                         replacements.add(
-                            Triple(it.range, slot.replacement.invoke(it, index), slot)
+                            Triple(it.range, slot.replacement.invoke(it, state), slot)
                         )
-                        index += 1
                     }
                 }
 

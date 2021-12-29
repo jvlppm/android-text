@@ -34,7 +34,7 @@ private fun getFindTagPattern(): String {
     return "(?=$capturingOpenRx)(?:(?=.*?$increaseLevel(?!.*?\\3)(.*$closeAnyRx(?!.*\\4).*))(?=.*?$decreaseLevel(?!.*?\\4)(?<second>.*)).)+?.*?(?=\\3)((?!$increaseLevel).)*(?=\\4\$)"
 }
 
-private fun decodeTag(style: (String)->Any?): Pair<Pattern, (MatchResult, Int)->Text> {
+private fun decodeTag(style: (String)->Any?): Pair<Pattern, (MatchResult)->Text> {
     val openClosePattern = Pattern.compile(getFindTagPattern(), Pattern.DOTALL)
     val outerTagRx = Pattern.compile("<(\\w+)( [^>]*)?>(?<content>.*)<\\/\\1>").toRegex()
 
@@ -42,7 +42,7 @@ private fun decodeTag(style: (String)->Any?): Pair<Pattern, (MatchResult, Int)->
         style(tag),
     ) + tagStyle.map { if (it.first == "style") it.second else "${it.first}:${it.second}" }
 
-    return openClosePattern to { match, _ ->
+    return openClosePattern to { match ->
         val tagName = match.groupValues[1]
         val tagProperties = match.groupValues[2]
         val properties = propertiesAttributeRx.findAll(tagProperties).map { m -> m.groupValues[1] to (m.groupValues[3].valueOrNull() ?: m.groupValues[5]) }
@@ -76,18 +76,18 @@ private fun Text.decodeLineBreakTags(): Text {
     val breakLineBetweenTags = listOf("p", "div")
     val breakTagsRx = breakLineBetweenTags.joinToString("|") { "\\b$it\\b" }
     return this.replaceAll(
-        Pattern.compile("[\\s]+") to { _, _ -> Text.space },
+        Pattern.compile("[\\s]+") to { Text.space },
     ).replaceAll(
-        Pattern.compile("<br/?>") to { _, _ -> Text.lineBreak },
+        Pattern.compile("<br/?>") to { Text.lineBreak },
         // Line break before first block tag
-        Pattern.compile("(?<!<\\/($breakTagsRx)>)(?<=[a-z-9<>])\\s*(?=<($breakTagsRx))") to { match, _ ->
+        Pattern.compile("(?<!<\\/($breakTagsRx)>)(?<=[a-z-9<>])\\s*(?=<($breakTagsRx))") to { match ->
             Text.concatenate(
                 Text("\n"),
                 Text("\n", style = "scale:0.5").takeIf { match.groupValues[2] == "p" }
             )
         },
         // Line break after block tags
-        Pattern.compile("(?<=<\\/($breakTagsRx)>)(\\s*)") to { match, _ ->
+        Pattern.compile("(?<=<\\/($breakTagsRx)>)(\\s*)") to { match ->
             Text.concatenate(
                 Text("\n"),
                 Text("\n", style = "scale:0.5").takeIf { match.groupValues[1] == "p" }
@@ -104,24 +104,24 @@ fun Text.decodeStyleTags(decodeLineBreaks: Boolean = false) = this.let {
 }.decodeStyleTagsInternal()
 
 fun Text.trim() = this.replaceAll(
-    Pattern.compile("^[\\s]+") to { _, _ -> Text.empty },
-    Pattern.compile("[\\s]+$") to { _, _ -> Text.empty },
+    Pattern.compile("^[\\s]+") to { Text.empty },
+    Pattern.compile("[\\s]+$") to { Text.empty },
 )
 
 private fun Text.decodeMarkdownStyle(): Text = this.replaceAll(
-    Pattern.compile("_([^_]*?)_") to { match, index -> Text(match.groupValues[1], "italic").decodeMarkdownStyle() },
-    Pattern.compile("\\*\\*([^*]*?)\\*\\*") to { match, index -> Text(match.groupValues[1], "bold").decodeMarkdownStyle() },
+    Pattern.compile("_([^_]*?)_") to { match -> Text(match.groupValues[1], "italic").decodeMarkdownStyle() },
+    Pattern.compile("\\*\\*([^*]*?)\\*\\*") to { match -> Text(match.groupValues[1], "bold").decodeMarkdownStyle() },
 )
 
 private fun Text.joinMarkdownLines() = this.replaceAll(
     // Find last-lines in section
-    Pattern.compile("(^|(?<=\\n)[ ]*)(?=\\w)([^#\\r\\n]+?)((\\r?\\n[ ]*){2,}|(\\r?\\n[ ]*(?=#)))") to { match, index -> Text(match.groupValues[2].trim() + "\n") },
+    Pattern.compile("(^|(?<=\\n)[ ]*)(?=\\w)([^#\\r\\n]+?)((\\r?\\n[ ]*){2,}|(\\r?\\n[ ]*(?=#)))") to { match -> Text(match.groupValues[2].trim() + "\n") },
     // Join single line-breaks
-    Pattern.compile("(^|(?<=\\n)[ ]*)(?=\\w)([^#\\r\\n]+?)(\\r?\\n[ ]*)+(?=[^\\r\\n#])") to { match, index -> Text("${match.groupValues[2].trim()} ") },
+    Pattern.compile("(^|(?<=\\n)[ ]*)(?=\\w)([^#\\r\\n]+?)(\\r?\\n[ ]*)+(?=[^\\r\\n#])") to { match -> Text("${match.groupValues[2].trim()} ") },
 )
 
-private fun decodeMarkdownHeaderReplacement(size: Int, style: Any): Pair<Pattern, (MatchResult, Int)->Text> =
-    Pattern.compile("(^|(?<=\\n)[ ]*)[ ]*#{$size}[ ]*([^#\\r\\n]+?($|\\r?\\n))($|[\\r\\n ]*)") to { match, index ->
+private fun decodeMarkdownHeaderReplacement(size: Int, style: Any): Pair<Pattern, (MatchResult)->Text> =
+    Pattern.compile("(^|(?<=\\n)[ ]*)[ ]*#{$size}[ ]*([^#\\r\\n]+?($|\\r?\\n))($|[\\r\\n ]*)") to { match ->
         Text.concatenate(
             Text(match.groupValues[2].trim(), style),
             Text("\n")
