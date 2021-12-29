@@ -46,7 +46,7 @@ Check the releases page on github to see what is the latest version available
 
 ```
 dependencies {
-		implementation 'com.github.jvlppm:android-text:v0.2'
+		implementation 'com.github.jvlppm:android-text:v0.3'
 }
 ```
 
