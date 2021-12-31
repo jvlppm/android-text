@@ -402,7 +402,7 @@ abstract class Text {
                         } ?: 0
 
                         if (trimStart <= baseSpan.range.last - baseSpan.range.first && outside.isEmpty()) {
-                            val before = replacements.filter { it.originalRange.last < baseSpan.range.first }
+                            val before = replacements.filter { it.originalRange.last < baseSpan.range.first && it.originalRange.first < baseSpan.range.first }
                             val offsetStartChange = before.sumOf { it.sizeChange }
                             val during = replacements.filter { it.originalRange.first >= baseSpan.range.first && it.originalRange.last <= baseSpan.range.last }
                             val offsetSizeChange = during.sumOf { it.sizeChange }
