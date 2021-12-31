@@ -4,55 +4,7 @@ Create and style a text from android ViewModel, without depending on a context.
 
 It can be easily converted to a SpannableString, providing a context, without worrying about ranges.
 
-## Setup
-
-*Step 1.* Add the JitPack repository to your build file
-
-Add jitpack.io as a repository on your settings.gradle
-
-```
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        ...
-        maven { url 'https://jitpack.io' }
-    }
-}
-```
-
-Older projects had the repositories defined inside build.gradle instead
-
-```
-buildscript {
-    repositories {
-        jcenter()
-        // DO NOT ADD IT HERE!!!
-    }
-    ...
-}
-
-allprojects {
-    repositories {
-        mavenLocal()
-        jcenter()
-        // ADD IT HERE
-        maven { url "https://jitpack.io" }
-    }
-}
-```
-
-*Step 2.* Add the dependency to your app's build.gradle
-Check the releases page on github to see what is the latest version available
-
-```
-dependencies {
-		implementation 'com.github.jvlppm:android-text:v0.3'
-}
-```
-
----
-
-## What is it
+## Simple Usage
 
 `com.jvlppm.text.Text` is a class that describes a text to be displayed
 
@@ -62,6 +14,7 @@ without a reference to context.
 ```kotlin
 val staticText = Text("Simple Text")
 val resourceText = Text(R.string.my_resource_text, style = "bold")
+val concatenatedText = staticText + Text.space + resourceText
 ```
 
 This `Text` can be manipulated / formatted by your view model,
@@ -86,7 +39,7 @@ And since this method is declared as a `BindingAdapter`, you can also use `andro
 <TextView
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:text="@{viewModel.myTextVariable}" />
+    android:text="@{viewModel.concatenatedText}" />
 ```
 
 You can also create the SpannableString and apply it manually.
@@ -104,7 +57,7 @@ fun Text.asSpannable(context: Context): SpannableString
 
 ## Creating Text
 
-A text can be created in a few ways
+A `Text` can be created with a `String` or a `@StringRes Int`, and it also accepts a style object that can be attached to your Text
 
 ```kotlin
 val staticText = Text("Sample")
@@ -164,11 +117,11 @@ val text = Text("%s %s")
 
 ## Styling Text
 
-A `Text` can be created with a `String` or a `@StringRes Int`, and it also accepts a style object that can be attached to your Text
+A `Text` can hold a style object that represents how it should be styled, this can be a `String` or any other object.
 
 ```kotlin
 val text1 = Text("Static text", style = "bold");
-val text1 = Text(R.string.my_sample_text, style = myCustomStyleObject);
+val text2 = Text(R.string.my_sample_text, style = myCustomStyleObject);
 ```
 
 Later when the `Text` gets displayed it will then try to decode your style object using `com.jvlppm.text.TextManager`.
@@ -258,4 +211,52 @@ import com.jvlppm.text.extensions.decodeStyleTags
 // Creates a text that styles the word "string" with "bold" and "styles" with "italic"
 val text = Text("My simple <b>string</b> with <i>styles</i>")
     .decodeStyleTags()
+```
+
+---
+
+## Setup
+
+*Step 1.* Add the JitPack repository to your build file
+
+Add jitpack.io as a repository on your settings.gradle
+
+```
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        ...
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+Older projects had the repositories defined inside build.gradle instead
+
+```
+buildscript {
+    repositories {
+        jcenter()
+        // DO NOT ADD IT HERE!!!
+    }
+    ...
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        jcenter()
+        // ADD IT HERE
+        maven { url "https://jitpack.io" }
+    }
+}
+```
+
+*Step 2.* Add the dependency to your app's build.gradle
+Check the releases page on github to see what is the latest version available
+
+```
+dependencies {
+	implementation 'com.github.jvlppm:android-text:v0.4'
+}
 ```
