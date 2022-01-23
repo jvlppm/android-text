@@ -42,7 +42,7 @@ And since this method is declared as a `BindingAdapter`, you can also use `andro
     android:text="@{viewModel.concatenatedText}" />
 ```
 
-You can also create the SpannableString and apply it manually.
+You can also create the SpannableString / String and apply it manually.
 
 ```kotlin
 import com.jvlppm.text.extensions
@@ -51,6 +51,11 @@ import com.jvlppm.text.extensions
  * This method creates a SpannableString with the corresponding text and styles applied.
  */
 fun Text.asSpannable(context: Context): SpannableString
+
+/**
+ * This method resolves the Text into a simple String with no formatting information.
+ */
+fun Text.toString(context: Context): String
 ```
 
 ---
@@ -78,7 +83,7 @@ val spaced = Text.spaced(
     resourceText
 )
 
-val multilines = Text.lines(
+val multiline = Text.lines(
     Text("First line"),
     Text("Second line", style = null),
 )
@@ -120,8 +125,8 @@ val text = Text("%s %s")
 A `Text` can hold a style object that represents how it should be styled, this can be a `String` or any other object.
 
 ```kotlin
-val text1 = Text("Static text", style = "bold");
-val text2 = Text(R.string.my_sample_text, style = myCustomStyleObject);
+val text1 = Text("Static text", style = "bold")
+val text2 = Text(R.string.my_sample_text, style = myCustomStyleObject)
 ```
 
 Later when the `Text` gets displayed it will then try to decode your style object using `com.jvlppm.text.TextManager`.
@@ -138,12 +143,12 @@ which will be used by your interface.
 "underline" // Resolves to a UnderlineSpan()
 "strike" // Resolves to a StrikethroughSpan()
 "italic" // Resolves to a StyleSpan(Typeface.ITALIC)
-"bold", // Resolves to a StyleSpan(Typeface.BOLD)
+"bold" // Resolves to a StyleSpan(Typeface.BOLD)
 "strong" // Resolves to a StyleSpan(Typeface.BOLD)
-"font:*", // Resolves to a MetricAffectingSpan that changes the typeface
-"font-family:*", // Resolves to a TypefaceSpan
-"color:*", // Resolves to a ForegroundColorSpan
-"scale:*", // Resolves to a RelativeSizeSpan
+"font:*" // Resolves to a MetricAffectingSpan that changes the typeface
+"font-family:*" // Resolves to a TypefaceSpan
+"color:*" // Resolves to a ForegroundColorSpan
+"scale:*" // Resolves to a RelativeSizeSpan
 ```
 
 Some styles accept parameters, like `scale` for example, and can be used as
@@ -257,6 +262,6 @@ Check the releases page on github to see what is the latest version available
 
 ```
 dependencies {
-	implementation 'com.github.jvlppm:android-text:v0.4'
+	implementation 'com.github.jvlppm:android-text:v0.5'
 }
 ```

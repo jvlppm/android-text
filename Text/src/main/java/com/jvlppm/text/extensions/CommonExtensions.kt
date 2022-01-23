@@ -10,8 +10,8 @@ import java.util.regex.Pattern
 
 internal fun String.valueOrNull() = this.takeUnless { isNullOrBlank() }
 
-fun Text.asSpannable(context: Context, styleMarkupResolver: StyleMarkupResolver? = null): SpannableString {
-    val markupRepository = styleMarkupResolver ?: TextManager.instance.config.globalResolver
+fun Text.asSpannable(context: Context): SpannableString {
+    val markupRepository = TextManager.instance.markupResolver
     val spannableString = SpannableString(toString(context))
     getStyleRanges(context).forEach {
         for (markup in markupRepository.resolveMarkupForStyle(context, it.style)) {

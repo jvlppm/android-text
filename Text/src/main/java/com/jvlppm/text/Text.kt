@@ -393,7 +393,6 @@ abstract class Text {
 
                     baseSpans.forEach { baseSpan ->
 
-
                         val outside = replacements.filter { it.originalRange.first < baseSpan.range.first && it.originalRange.last > baseSpan.range.last }
                         val startedBeforeAndFinishInside = replacements.filter { it.originalRange.first < baseSpan.range.first && it.originalRange.last >= baseSpan.range.first && it.originalRange.last <= baseSpan.range.last }
 

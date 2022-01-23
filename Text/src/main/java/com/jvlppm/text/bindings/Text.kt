@@ -6,14 +6,12 @@ import android.view.View
 import android.widget.TextView
 import androidx.databinding.BindingAdapter
 import com.jvlppm.text.Text
-import com.jvlppm.text.TextManager
 import com.jvlppm.text.extensions.asSpannable
 
 
-@BindingAdapter(value = ["android:text", "text_markupResolver"], requireAll = false)
-fun TextView.setText(text: Text?, markupResolver: String? = null) {
-    val repository = TextManager.instance.config.namedResolvers[markupResolver]
-    val spannableString = text?.asSpannable(context, repository)
+@BindingAdapter("android:text")
+fun TextView.setText(text: Text?) {
+    val spannableString = text?.asSpannable(context)
 
     val hasLinks = !spannableString?.getSpans(
         0, spannableString.length,

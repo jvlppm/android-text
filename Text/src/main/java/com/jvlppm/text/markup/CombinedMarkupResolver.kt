@@ -5,10 +5,9 @@ import android.text.TextPaint
 import android.text.style.ClickableSpan
 import android.view.View
 import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
-class GlobalMarkupResolver(
+class CombinedMarkupResolver(
     var stringResolver: StyleStringResolver,
     private val resolvers: MutableList<StyleMarkupResolver> = mutableListOf()
 ): StyleMarkupResolver {
@@ -19,30 +18,6 @@ class GlobalMarkupResolver(
 
     fun remove(resolver: StyleMarkupResolver): Boolean {
         return resolvers.remove(resolver)
-    }
-
-    fun modifyStyles(lifecycleOwner: LifecycleOwner): StyleStringResolver {
-        val updated = stringResolver.copy()
-        lifecycleOwner.lifecycle.addObserver(object: DefaultLifecycleObserver {
-            private lateinit var original: StyleStringResolver
-
-            override fun onStart(owner: LifecycleOwner) {
-                super.onResume(owner)
-                original = this@GlobalMarkupResolver.stringResolver
-                this@GlobalMarkupResolver.stringResolver = updated
-            }
-
-            override fun onStop(owner: LifecycleOwner) {
-                super.onPause(owner)
-                this@GlobalMarkupResolver.stringResolver = original
-            }
-
-            override fun onDestroy(owner: LifecycleOwner) {
-                super.onDestroy(owner)
-                lifecycleOwner.lifecycle.removeObserver(this)
-            }
-        })
-        return updated
     }
 
     fun clear() {
