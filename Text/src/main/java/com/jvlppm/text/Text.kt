@@ -358,13 +358,11 @@ abstract class Text {
                 if (this === other) return true
                 if (javaClass != other?.javaClass) return false
 
-                other as ReplaceSlots<TState>
+                other as ReplaceSlots<*>
 
                 if (text != other.text) return false
                 if (!args.contentEquals(other.args)) return false
-                if (style != other.style) return false
-
-                return true
+                return style == other.style
             }
 
             override fun hashCode(): Int {

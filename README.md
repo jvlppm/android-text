@@ -220,7 +220,29 @@ val text = Text("My simple <b>string</b> with <i>styles</i>")
 
 ---
 
-## Setup
+## Setup with Gradle KTS
+
+
+settings.gradle.kts
+```
+dependencyResolutionManagement {
+    ...
+    repositories {
+        ...
+        maven { setUrl("https://jitpack.io") }
+    }
+}
+```
+build.gradle.kts (:app)
+```
+dependencies {
+    ...
+    implementation("com.github.jvlppm:android-text:v0.6")
+}
+```
+
+
+## Setup with older projects
 
 *Step 1.* Add the JitPack repository to your build file
 
@@ -262,6 +284,6 @@ Check the releases page on github to see what is the latest version available
 
 ```
 dependencies {
-	implementation 'com.github.jvlppm:android-text:v0.5'
+	implementation 'com.github.jvlppm:android-text:v0.6'
 }
 ```

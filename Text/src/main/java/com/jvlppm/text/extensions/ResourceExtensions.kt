@@ -50,10 +50,10 @@ internal fun Context.decodeReference(value: String, defType: String): AndroidRes
 
     val isAttr = value.startsWith("?")
     val packageName = match.groupValues[2].valueOrNull()
-    val defType = match.groupValues[4].valueOrNull() ?: if (isAttr) "attr" else defType
+    val finalDefType = match.groupValues[4].valueOrNull() ?: if (isAttr) "attr" else defType
     val valueStr = match.groupValues[5]
 
-    val id = valueStr.toIntOrNull() ?: getIdentifier(this, packageName, defType, valueStr)
+    val id = valueStr.toIntOrNull() ?: getIdentifier(this, packageName, finalDefType, valueStr)
     return id?.let {
         AndroidResource(it, isAttr)
     }

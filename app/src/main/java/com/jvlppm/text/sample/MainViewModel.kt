@@ -1,8 +1,8 @@
 package com.jvlppm.text.sample
 
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.map
 import com.jvlppm.text.Text
 import com.jvlppm.text.extensions.decodeStyleTags
 import java.util.regex.Pattern
@@ -75,7 +75,7 @@ class MainViewModel : ViewModel() {
 
     private val _clickCount = MutableLiveData(0)
 
-    val clickSample = Transformations.map(_clickCount) { clickCount ->
+    val clickSample = _clickCount.map { clickCount ->
         Text("You clicked %d times", style = "scale:2")
             .formatString(clickCount to "color:?attr/colorPrimary;bold;scale:2")
             .styleOccurrences(Text("clicked", "underline"), { _clickCount.value = _clickCount.value!! + 1 })
